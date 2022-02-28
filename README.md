@@ -16,6 +16,7 @@ This function does not suggest a reduction value by itself but you can choose th
 or use the elblow method as well.
 
 TODO:
+* Add further test and possibilities
 * Make compatible with weights to be savable
 * pca_tests speed can not be improved by skipping dimensions
 
