@@ -9,15 +9,14 @@ the first and last data value.
 """
 
 import numpy as np
-from Typing import List
 
-def elbow_index(Ydata : List, Xdata : List=None):
+def elbow_index(Ydata : list, Xdata : list=None):
     """
     Returns the index of the elbow value in the given data.
     The calculate_elbow method is preferred.
     Without Xdata this assumes a range(0, len(Ydata)) as Xdata.
     """
-    XY = np.empty((len(Ydata),2))
+    XY = np.empty((len(Ydata), 2))
     XY[:,0] = Xdata or range(len(Ydata))
     XY[:,1] = Ydata
     dir_vec = XY[-1] - XY[0]
@@ -32,7 +31,7 @@ def elbow_index(Ydata : List, Xdata : List=None):
     return np.argmax(distToLine)
 
 
-def calculate_elbow(Ydata : List, Xdata : List):
+def calculate_elbow(Ydata : list, Xdata : list):
     """
     Returns the X value where the point of maximum distance
     the elbow value is of the Ydata.

@@ -699,7 +699,7 @@ class PCALayer(tf.keras.layers.Layer):
                            encoded_data : tf.Tensor,
                            decoder : tf.keras.Model, 
                            *, method : str='elbow', 
-                           loss_func : Callable[tf.Tensor, tf.Tensor] = bce_loss,
+                           loss_func : Callable[[tf.Tensor, tf.Tensor], tf.Tensor] = bce_loss,
                            return_losses : bool =True, 
                            test_range    : Iterable =None, 
                            adjust_components : bool = False,
