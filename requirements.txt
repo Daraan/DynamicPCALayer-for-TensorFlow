@@ -1,9 +1,9 @@
-imageio==2.9.0
-matplotlib==3.4.2
-numpy==1.19.5
-pandas==1.1.3
-scikit_learn==1.0.2
+imageio>=2.9.0                # optional
+matplotlib==3.4.2             # At least one function will change with a higher version
+numpy==1.19.5                 # 1.21 has to be tested.
+pandas>=1.1.3
+scikit_learn==1.0.2           # optional
 seaborn==0.11.0
 tensorflow==2.8.0
-tensorflow_gpu==2.5.3			# optional
-#tensorflow_datasets==4.3.0		# not needed
+tensorflow_gpu==2.5.3			    # optional GPU support. 2.5.3 needs to be tested!
+#tensorflow_datasets==4.3.0		# not implemented into a working example
