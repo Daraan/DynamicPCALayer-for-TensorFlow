@@ -5,5 +5,5 @@ pandas==1.1.3
 scikit_learn==1.0.2
 seaborn==0.11.0
 tensorflow==2.8.0
-tensorflow_gpu==2.4.1			# optional
+tensorflow_gpu==2.5.3			# optional
 #tensorflow_datasets==4.3.0		# not needed
