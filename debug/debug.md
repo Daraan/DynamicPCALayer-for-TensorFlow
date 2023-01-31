@@ -1,0 +1,2 @@
+In `pca_debug.ipynb`, I transformed a same dataset using a `PCALayer` from this library and using `scikit-learn.decomposition.pca` at the same time, but got different results, as shown in the `difference` section in the notebook. 
+Any idea why could this happen? 
