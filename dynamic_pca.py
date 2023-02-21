@@ -10,8 +10,7 @@ https://github.com/scikit-learn
 import tensorflow as tf
 import numpy as np
 
-import matplotlib.pyplot as plt
-from elbow_estimation import calculate_elbow
+from utils.elbow_calculation import calculate_elbow
 
 from typing import List, Dict, Tuple, Union, Callable, Iterable # Literal
 import functools
@@ -32,15 +31,15 @@ class tf_SVD():
         See svd_flip
         
         This tries to implement it a deterministic output from SVD
-        purely pased on TensorFlow functions.
-        Which is not 100% successfull yet and TensorFlow needs to run
+        purely based on TensorFlow functions.
+        Which is not 100% successful yet and TensorFlow needs to run
         in eagerly mode.
         """
         # From Scikit
         # https://github.com/scikit-learn/scikit-learn/blob/15a949460dbf19e5e196b8ef48f9712b72a3b3c3/sklearn/utils/extmath.py#L504
         # Still not 100% TF
         max_abs_cols = tf.argmax(tf.abs(u), axis=0)
-        print(max_abs_cols)
+        #print(max_abs_cols)
         # TF does not support fancy np slicing
         signs = tf.sign(u.numpy()[max_abs_cols, range(u.shape[1])]) # numpy -> Needs to run eagerly / dynamic
 
@@ -93,13 +92,13 @@ class tf_SVD():
         Parameters
         ----------
         X : tf.Tensor or array like
-            Calcualte the SVD with this data
+            Calculate the SVD with this data
         center : bool, optional
             Center the data before applying SVD
             The default is True.
         flip_Vt : bool, optional
             Applies the svd_flip method.
-            For a more deterministic svd result
+            For a more deterministic SVD result
             The default is True.
 
         Returns
@@ -107,7 +106,7 @@ class tf_SVD():
         S : tf.Tensor
             SingularValues.
         U : tf.Tensor
-            The second orthogonal matrix of the svd.
+            The second orthogonal matrix of the SVD.
         V : tf.Tensor
             Transformation Matrix.
 
@@ -130,24 +129,24 @@ class tf_SVD():
         
         Vt = tf.transpose(V)
                 
-        if True: 
-            # uses numpy, needs to run in eagerly mode
-            if flip_Vt:
-                npU, Vt = self.svd_flip(U.numpy(), Vt) # NOTE: NOT TF!
-                U = tf.convert_to_tensor(npU)
-                self.Vt = Vt
-            else:
-                self.Vt = Vt
-        else: 
-            # EXPERIMENTAL ues svt_flip_tf
+        #if True: 
+        # uses numpy, needs to run in eagerly mode
+        if flip_Vt:
+            npU, Vt = self.svd_flip(U.numpy(), Vt) # NOTE: NOT TF!
+            U = tf.convert_to_tensor(npU)
+            self.Vt = Vt
+        else:
+            self.Vt = Vt
+        #else: 
+            # EXPERIMENTAL use svt_flip_tf
             # Use TF only
             # Note: currently still uses .numpy() or non iterable max_abs_cols
             # above numpy version is faster.
-            if flip_Vt:
-                U, Vt = self.svd_flip_tf(U, Vt)
-                self.Vt = Vt
-            else:
-                self.Vt = Vt
+        #    if flip_Vt:
+        #        U, Vt = self.svd_flip_tf(U, Vt)
+        #        self.Vt = Vt
+        #    else:
+        #        self.Vt = Vt
         
         self.S, self.U, self.V = S, U, V
         return S, U, V
@@ -266,7 +265,7 @@ class tf_PCA(tf_SVD):
         if not self._isfitted:
             raise ValueError("Object is not fitted yet.")
         # create on demand
-        # Todo use functools.cache
+        # TODO use functools.cache
         if "explained_variance_" not in self.__dict__:
             self.explained_variance_ = np.array((self.S ** 2) / (self.n_samples - 1)) # -1 for bias
         return self.explained_variance_[:n_components]
@@ -405,6 +404,9 @@ class tf_PCA(tf_SVD):
         return cor
     
     def _test(self, X, n_components=None):
+        """
+        This is a test function to see if it works.
+        """
         # USE PRE ENCODED DATA!
         self.fit(X, n_components)
         print("Input:", X[0])
@@ -452,7 +454,7 @@ class PCALayer(tf.keras.layers.Layer):
     """
     Dynamic PCA Layer
     
-    use pcafit(data) method to caluclate the underlaying SVD
+    use pcafit(data) method to calculate the underlying SVD
     and the n_components attribute to apply the PCA and dimension
     reduction via this layer.
     This can be done at any point.
@@ -483,9 +485,9 @@ class PCALayer(tf.keras.layers.Layer):
                 'pass'      : Does nothing and passes input
                 'transform' : applies PCA transformation
                 'fit_transform' : calculates and applies the PCA
-                'inverval' : every self.fit_interval batches 'fit_transform'
+                'interval' : every self.fit_interval batches 'fit_transform'
                               is used else 'transform'
-                'fit' : caluclates the PCA but without transformation
+                'fit' : calculates the PCA but without transformation
         fit_interval : int, optional
             For the 'interval' mode. Defines are how many batches the pca
             should be fitted again.
@@ -523,7 +525,7 @@ class PCALayer(tf.keras.layers.Layer):
         self.pca = tf_PCA()
         self.counter = 0
         self.data = data
-        self._isfitted = _isfitted       # Used by partner layer, todo should not be private
+        self._isfitted = _isfitted       # Used by partner layer, todo should not be private (really?)
         self.n_components = n_components
         self.partner_layer = partner_layer # NOTE: Set during init of partner 
         # For Experiments
@@ -532,7 +534,7 @@ class PCALayer(tf.keras.layers.Layer):
     
     def fitpca(self, X, n_components : int =None, set_mode : str = 'transform') -> None:
         """
-        This is the method that usally is used to apply the necessary
+        This is the method that usually is used to apply the necessary
         actions to perform the PCA
 
         Parameters
@@ -578,6 +580,27 @@ class PCALayer(tf.keras.layers.Layer):
             raise ValueError(newmode + " is not a valid newmode")
             
     def set_mode(self, mode:str, fit_interval=100):
+        """
+        Changes the behavior how the layer behaves when called.
+        
+        ------
+        
+        mode : str, optional
+            Mode of the PCA layer how the call and transformation is applied.
+            The default is 'pass', after fitpca is called the mode changes
+            to 'transform'.
+            Valid modes are:
+                'pass'      : Does nothing and passes input
+                'transform' : applies PCA transformation
+                'fit_transform' : calculates and applies the PCA
+                'interval' : every self.fit_interval batches 'fit_transform'
+                              is used else 'transform'
+                'fit' : calculates the PCA but without transformation
+        fit_interval : int, optional
+            For the 'interval' mode. Defines are how many batches the pca
+            should be fitted again.
+            The default is 100.
+        """
         self.mode = mode
         if mode == 'fit_interval':
             self.fit_interval = fit_interval
@@ -586,9 +609,7 @@ class PCALayer(tf.keras.layers.Layer):
     
     #@staticmethod
     def _call_pass(self, inputs):
-        """
-        Returns the input without doing anyhting.
-        """
+        """Returns the input without doing anything."""
         return inputs # maybe just shift by mean
     
     def _call_transform(self, inputs):
@@ -649,7 +670,7 @@ class PCALayer(tf.keras.layers.Layer):
 
      
     # TODO
-    # For possible serialization somewhen
+    # For possible serialization in the future
     # Need to store the SVD matrices
     @functools.wraps(tf.keras.layers.Layer.get_config)
     def get_config(self) -> dict:
@@ -706,23 +727,23 @@ class PCALayer(tf.keras.layers.Layer):
                            verbose : bool =True) -> Tuple[int, List[float]]:
 
         """
-        Estimates a good reduction by caluclating the loss at given points
+        Estimates a good reduction by calculating the loss at given points
         and applying the elbow method to the resulting graph.
         Increasing the Dimensions above the elbow value results only in a below
         average improvement.
         
-        HINT:: 
-        It is usefull to reduce the data to a certain size <1000 for this method to be efficient.
-        The results of a small sample do not change relevantly.
+        HINT:
+        It is useful to use only a data sample <1000 for this method to be efficient.
+        The results of a small sample do not change relevantly  - but needs to be tested for the dataset.
         
         A custom test range can be passed, else it will cover the whole latent space.
         HINT: Passing only even dimensions will double the speed and this scales
         further.
-        By halfing the test_range the results will only vary by +- 1
-        
+        By halving the test_range the results will only vary by +- 1
+        Likewise the speed can be increased linearly with the deviation.
 
         TODO: A threshold to abort this test 
-              if the values are not changeing relevantly.
+              if the values are not changing relevantly.
 
 
         Parameters
@@ -740,11 +761,11 @@ class PCALayer(tf.keras.layers.Layer):
         method : str, optional
             Method to estimate the results
             The default is 'elbow'.
-            Currently no other mode is choosable.
+            NOTE: Currently no other mode can be chosen.
             A faster method would be the calculation of the mean change
             and find the point where the absolute changes drop below this 
             value.
-            But this method can fail for non convex/conkav graphs.
+            But this method can fail for non convex/concave graphs.
             
         loss_func : Callable[tf.Tensor, tf.Tensor], optional
             Function for the loss calculation
@@ -770,11 +791,11 @@ class PCALayer(tf.keras.layers.Layer):
         Returns
         -------
         int
-            Elbow Value and estiamted value for a good dimension
+            Elbow Value and estimated value for a good dimension
         List[float], optional
             if return_losses is set returns the losses in the test_range
         """
-        BATCH_SIZE = 256 # Above 500 memory issues can occure!!
+        BATCH_SIZE = 256 # Above 500 memory issues can occur! TODO: can these be handled here?
         losses = []
         test_range = test_range or range(encoded_data.shape[-1], 0, -1)
         reset_n, reset_mode = self.n_components, self._mode
@@ -784,10 +805,10 @@ class PCALayer(tf.keras.layers.Layer):
                 print(f"Reducing to {i}", end="\r")
             self.n_components=i;
             try: 
-                # Calulates the loss over batches else can run out of memory
+                # Calculates the loss over batches else can run out of memory
                 # in this implementation
                 partial_losses = []
-                print("") # fix for spyder console.
+                print("") # fix for Spyder console. # todo check for newer version
                 for k in range(len(encoded_data) // BATCH_SIZE + 1):
                     out = decoder(self.pca.transform(encoded_data[k * BATCH_SIZE : (k+1) * BATCH_SIZE], i))
                     ploss = loss_func(data[k*BATCH_SIZE : (k+1) * BATCH_SIZE], out)
@@ -798,7 +819,7 @@ class PCALayer(tf.keras.layers.Layer):
             except tf.errors.InvalidArgumentError as e:
                 # current VAE setup with custom loss needs n to be even.
                 # copying seams better than inserting None, nan   
-                # todo disambigous if raise in custom loss, decoder function.
+                # todo ambiguous if raise in custom loss, decoder function.
                 loss = losses[-1]
                 print(e)
             except Exception as e:  
@@ -895,304 +916,3 @@ class PCAInverseLayer(tf.keras.layers.Layer):
         config['partner_layer'] = self.partner_layer
         return config
 
-
-# %% Test Functions
-
-def _sktransform(n, encoded):
-    """
-    For testing, maybe will be deprecated.
-    A^1*A*latent - one transformation cycle
-    """
-    from sklearn.decomposition import PCA
-    pca = PCA(n)
-    latent = pca.fit_transform(encoded)
-    return pca.inverse_transform(latent)
-
-
-def use_loss_func(loss_func=bce_loss):
-    """
-    Decorator function that makes a native Keras / Tensorflow function
-    compatible with the pca_tests function
-    """    
-    def calcloss(original, latent, decoder):
-        return loss_func(original,  decoder.predict(latent)).numpy()
-    return calcloss
-
-def eval_loss(original, latent, decoder, loss_func=bce_loss):
-    """
-    Example of a native Keras / Tensorflow function to be used with
-    pca_tests
-    """
-    return loss_func(original,  decoder.predict(latent)).numpy()
-
-
-
-# NOTE: update python version for correct type hinting.
-def pca_tests(original, encoded, 
-                decoder : tf.keras.Model, 
-                pca     : tf_PCA = None,
-                include_last : bool = True, 
-                start : int = 1, 
-                min_rel_changes : Union[ float, List[float] ] = 0.0025, 
-                test_funcs   : Dict[str, callable]   = {'pca_loss' : eval_loss},
-                take_samples : Dict[str, List[int] ] = None,   # {Literal['indices'] : List[int]}=None, # python 3.8+
-                min_samples  : int  = 20,
-                verbatim     : bool = False ) -> Tuple[ Dict[str, List[int]], Dict[str, List[float]] ]:
-    """
-    Calculates the loss between the original and autoencoded data.
-    For all n in [1, encoded.shape[-1]] the encoded data's dimension is
-    reduced by PCA.
-    Returns all used n and the losses x ,y
-    
-    The eval_func must accept three parameters
-        eval_func(original, latent, decoder)
-        This allows a individual calculation of the loss
-        
-        HINT:
-        The decorator use_loss_func(loss_function) -> eval_func
-        can be used here with standard functions.
-        The loss_function should take two positional arguments:
-        loss_function( original, decoded_result )
-        
-    Performs multiple test.
-    Note that the returned sizes are for the longest test.
-    You might need to zip them or do sizes[:len(results[i])]
-    
-    -- take_samples and min_samples
-    These help to visualize results by taking samples of the decoded
-    data for the different dimensions.
-    min_samples assures that the tests by min_rel_changes are not terminated
-    until this amount of samples has been taken.
-    The samples are always taken at the provided indices, so for example
-    pass one index for each possible class.
-    
-    It's possible to pass test_funcs = None to only take samples.
-    
-    Providing
-    take_samples = {'indices': [int, ...]} 
-    will take samples from the decoded data with the provided indices.
-    These will be stored as 'index : [samples]' IN THE SAME dictionary
-
-
-    Parameters
-    ----------
-    original : array like
-        Original data
-    encoded : array like
-        Encoded data
-    decoder : tf.keras.Model
-        Model that has a .predict method for the encoded data.
-    pca : tf_PCA, optional
-        If pca object is provided it will NOT be fitted.
-        Else a new one will be generated
-        The default is None.
-    include_last : bool, optional
-        Perform the tests for no dimension result and append it. 
-        NOTE: This does not influence take_samples, it will NOT take a sample
-        of the decoded data.
-        The default is True.
-    start : int, optional
-        Minimum dimension to start the test.
-        The default is 1.
-    min_rel_changes : Union[ float, List[float] ], optional
-        A single value or a list of matching length with test_funcs.
-        Will stop the individual tests if a relative change falls below
-        this/these values.
-        The default is 0.0025.
-    test_funcs : Dict[str, callable], optional
-        A dict with a names as keys and a callable to perform special tests.
-        The callable has to take 3 parameters:
-            eval_func(original, latent, decoder)
-        Alternatively use the provided decorator
-            use_loss_func(loss_function)
-        and a loss_function( original, result )
-        By default this calculates the binary_crossentropy
-        The default is {'pca_loss' : use_loss_func(loss_func=bce_loss)}.
-        
-        
-    take_samples : Dict["indices", List[int] ], optional
-        Takes samples of the decoded data at the given indices
-        for example for visualization.
-        The samples will be inserted into this dictionary with the
-        indices as new keys.
-        The default is None.
-    min_samples : int, optional
-        Normally min_rel_changes end this test.
-        If samples are to be taken this assures that this amount of samples
-        are taken before the test is stoped.
-        The default is 20.
-    verbatim : bool, optional
-        Dumps information of the current dimension and test results. 
-        The default is False.
-
-    Returns
-    -------
-    test_sizes : Dict[str, List[int]], 
-        As keys the names and keys from test_funcs
-        As values the dimensions where the tests where performed
-    results : Dict[str, List[float]]
-        As keys the names and keys from test_funcs
-        As values the results of the functions in the test_funcs argument
-    """
-    # Check types
-    if not isinstance(test_funcs, dict):
-        raise TypeError("test_funcs must be a dict instance {name:function}. Can be empty {}.")
-    if take_samples is not None and isinstance(take_samples, dict) \
-        and not 'indices' in take_samples:
-        raise KeyError("Provide a dict with a 'indices' key for take_samples.")
-    
-    if take_samples is not None:
-        take_samples.update({idx:[] for idx in take_samples['indices'] if idx not in take_samples})
-    samples_taken = 0
-    
-    if type(min_rel_changes) == float:
-        min_rel_changes = [min_rel_changes] * len(test_funcs)
-    if len(min_rel_changes) != len(test_funcs):
-        raise ValueError("len(min_rel_changes) between 1 < changes < len(test_funcs)")
-    
-    # scikit or pcalayer
-    if pca is None:
-        pca = tf_PCA()
-        pca.fit(encoded)
-
-    results = {name:[] for name in test_funcs.keys()}
-
-    sizes      = []
-    test_done  = [False] * len(test_funcs)
-    #start, end = [0.] * len(test_funcs), [0.] * len(test_funcs) # for times
-    for n in range(start, encoded.shape[-1]):
-        sizes.append(n)
-        latent = pca.autoencode_transform(encoded, n) # reduce dimension and retransform
-        
-        for i, (test_name, eval_func) in enumerate(test_funcs.items()):
-            if test_done[i]: 
-                continue
-            test_results = results[test_name]
-            #start[i] = time.perf_counter()
-            result = eval_func(original, latent, decoder)
-            #end[i] = time.perf_counter()
-            results[test_name].append(result)
-            if len(test_results) > 5 and test_results[-2]*min_rel_changes[i] > np.abs(result - test_results[-2]):
-                test_done[i] = True
-                if verbatim:
-                    print("Stopping Test for func " + test_name + str(i) + 
-                          "\nchange was under min_rel_change. Continue with other tests.")
-        # Store decoded samples by pca
-        if take_samples is not None:
-            samples = np.array([latent[s] for s in take_samples['indices']])
-            decoded_samples = decoder.predict(samples)
-            for sample, idx in zip(decoded_samples, take_samples['indices']):
-                take_samples[idx].append(sample)
-                    
-        if verbatim:
-            print("Results for size=", n, " : ", *[test_name+": "+str(results[test_name][-1])+ "," for test_name in test_funcs.keys()])
-            #print("           Times:", [format(end[i]-start[i], ".2f")+"s" for i in range(len(test_funcs))])
-        
-        samples_taken+=1 # do not put in if
-        # Note that all([]) is True if no test_funcs are given
-        if all(test_done) and (take_samples is None or samples_taken >= min_samples):
-            print("Stopping, changes were under min_rel_change. Only adding last value")
-            break
-    # Calculate for full model
-    if include_last:
-        latent = pca.autoencode_transform(encoded, encoded.shape[-1])
-        for i, (test_name, eval_func) in enumerate(test_funcs.items()):
-            results[test_name].append(eval_func(original, latent, decoder))
-        sizes.append(encoded.shape[-1])
-        # Todo: Also take sample here.
-    # Get X values for the done tests
-    test_sizes = {name : sizes[:len(results[name])] for name in results}
-    return test_sizes, results # x, y
-
-
-
-
-def loss_test(original, encoded, decoder, pca=None, calculate_last=True, min_rel_change=0.0025, eval_func=eval_loss,
-              verbatim=False)-> Tuple[List[int], List[float]]:
-    """
-    This is an OUTDATED but simpler version of pca_tests that takes
-    a single function.
-    
-    Calculates the loss between the original and autoencoded data.
-    For all n in [1, encoded.shape[-1]] the encoded data's dimension is
-    reduced by PCA.
-    Returns all used n and the losses x ,y
-    
-    The eval_func must accept three parameters
-    eval_func(original, latent, decoder)
-    """
-    if pca is None or not isinstance(pca, tf_PCA):
-        print("Using Skitkit pca, much slower")
-        scikit = True
-    else:
-        scikit = False
-    
-    results = []
-    sizes = []
-    for n in range(1, encoded.shape[-1]):
-        sizes.append(n)
-        if scikit:
-            latent = _sktransform(n, encoded)
-        else:
-            pca.n_components_ = n
-            latent = pca.transform(encoded) # decoder has inverse transform
-        
-        result = eval_func(original, latent, decoder)
-        results.append(result)
-        if verbatim:
-            print("Result for", n, " : ", result)
-        if len(results) > 10 and results[-2]*min_rel_change > np.abs(result - results[-2]):
-            if verbatim:
-                print("Stoping, loss change was under min_rel_change. Only adding last value")
-            break
-    if not scikit:
-        pca.n_components_ = encoded.shape[-1]
-        latent = pca.transform(encoded) # decoder has inverse transform 
-    else:
-        latent = encoded # lets assume perfect inverse tranfrom here
-    results.append(eval_func(original, latent, decoder))
-    sizes.append(encoded.shape[-1])
-    return sizes, results # x, y
-        
-
-def plot_loss_reduce(losses, test_range, 
-                     elbow_val=None, 
-                     loss_func=bce_loss, 
-                     data=None,
-                     figtitle="", figheader="Loss change", variable_name="BCE Loss", show=True,
-                     plot_minima=True, ylabel=None,
-                     # parameters to combine figures
-                     figsize=(9,6), newfig=True, **plotkwargs) -> Union[None, plt.Figure]:
-    """
-    Helps to visualize the results of pca_tests
-    
-    The loss_func argument is deprecated.
-    
-    data and data_size can be passed to calculate and plot an ideal loss on the orignal data.
-    using data_size=None will calculate the loss for the complete data set but will take longer.
-    """
-    if newfig:
-        fig = plt.figure(figsize=figsize)
-    plt.title(figheader)
-    plt.suptitle(figtitle)# + str(ENCODER_L1_VALUE))
-    plt.xlabel("Latent Layer Size")
-    plt.ylabel(ylabel or variable_name)
-    plotkwargs.setdefault('label', variable_name)
-    plotkwargs.setdefault('markersize',9)
-    plotkwargs.setdefault('linewidth', 2)
-    plt.plot(test_range, losses, ".-", **plotkwargs)
-    if plot_minima:
-        plt.axhline(min(losses), linestyle="--", c="C2", label="minima "+variable_name, linewidth=2.25)
-    if elbow_val is not None:
-        plt.axvline(elbow_val, linestyle=":", c="C4", label="Elbow value: "+str(elbow_val), linewidth=2.5)
-    if data is not None and loss_func is not None:
-        plt.axhline(loss_func(data, data), linestyle="--", c="C3", #label="ideal "+variable_name,
-                    linewidth=2)
-    plt.legend()
-    if show:
-        plt.show()
-    if newfig:
-        return fig
-
-
-    
