@@ -92,9 +92,11 @@ import seaborn as sns
 import os
 import glob
 
-from supplements import model_collection as mc
-from supplements.autoencoder_output import compare_with_model
-
+# NOTE & TODO: These are not provided!
+# This is a pd.DataFrame with information about the trained models
+# stored with this framework
+import model_collection as mc
+from pca_evaluation import compare_with_model
 from elbow_calculation import calculate_elbow
 
 from itertools import zip_longest

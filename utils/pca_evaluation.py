@@ -1,29 +1,26 @@
 """
+Evaluates an autoencoder network with a PCA at its core based on its reconstruction.
 
+The core function here are
+pca_tests for evaluation of a autoencoder+pca model
+and
+plot_loss_reduce to plot the results.
 """
 
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
+from sklearn.metrics import accuracy_score
 
 from typing import Union, Dict, List, Tuple
 
-from ..dynamic_pca import tf_PCA # two usages only
+from ..dynamic_pca import tf_PCA # two optional usages in this file
 
 
 bce_loss = tf.keras.losses.BinaryCrossentropy(
             from_logits=False, label_smoothing=0.0, reduction="auto", name="binary_crossentropy"
        )
 
-def _sktransform(n, encoded):
-    """
-    For testing, maybe will be deprecated.
-    A^1*A*latent - one transformation cycle
-    """
-    from sklearn.decomposition import PCA
-    pca = PCA(n)
-    latent = pca.fit_transform(encoded)
-    return pca.inverse_transform(latent)
 
 
 def use_loss_func(loss_func=bce_loss):
@@ -42,6 +39,58 @@ def eval_loss(original, latent, decoder, loss_func=bce_loss):
     """
     return loss_func(original,  decoder.predict(latent)).numpy()
 
+
+def compare_with_model(original_data : list, 
+                       labels_correct : list, 
+                       output_data : list, 
+                       compare_model, # must have a .predict(original_data) -> list method
+                       cache_original=True): 
+    """
+    compare_model : a classifier that predicts the output.
+    
+    Compares the output_data vs the original_data via the compare_model.
+    For example the orginal image vs autoencoded images.
+    This comparison does NOT use the original labels, these are only used
+    as reference how good the compare_model is on them.
+    
+    Assuming that the orignal_data does not change caches the result
+    of compare_model.predict(original_data).
+    
+    NOTE: When using batches cache_original=False needs to be used.
+    
+    Returns the overlapping ratio of the predictions on the original_data
+    vs. the prediction of the output_data
+    and secondly the accuracy_score of compare_model on the original data as reference.
+    """
+    # Simple and dirty cache in globals. Don't need to do this
+    # for every run if the model stays constant.
+    global labels_predicted_input
+    global model_acc
+    if not cache_original or 'labels_predicted_input' not in globals():
+        # Original labels - NOTE: Might be categorical
+        #labels_correct = np.argmax(labels_correct, axis=1)
+        # Predicted labels
+        labels_predicted_input = np.argmax(compare_model.predict(original_data), axis=1)
+        model_acc = accuracy_score(labels_correct, labels_predicted_input)
+    
+    # todo, if the compare_model was loaded this value is know.
+    print("Classifying autoencoder output...:", end="")
+    labels_predicted_output = np.argmax(compare_model.predict(output_data), axis=1)
+    
+    autoencoder_acc = accuracy_score(labels_predicted_input, labels_predicted_output)
+    print(autoencoder_acc)
+    
+    return autoencoder_acc, model_acc
+
+def _sktransform(n, encoded):
+    """
+    For testing, maybe will be deprecated.
+    A^1*A*latent - one transformation cycle
+    """
+    from sklearn.decomposition import PCA
+    pca = PCA(n)
+    latent = pca.fit_transform(encoded)
+    return pca.inverse_transform(latent)
 
 
 # NOTE: update python version for correct type hinting.
